@@ -16,19 +16,23 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import type { Card, Collage } from '@punk-records/shared';
 import { getSocket } from '../lib/socket';
-import { updateCardPosition, deleteCard } from '../lib/api';
+import { updateCardPosition, deleteCard, updateCardText } from '../lib/api';
 import CardNode, { type CardNodeData } from './CardNode';
 
 const nodeTypes = { card: CardNode };
 
 const UNDO_WINDOW_MS = 4000;
 
-function cardToNode(card: Card, onDelete: (id: string) => void): Node<CardNodeData> {
+function cardToNode(
+  card: Card,
+  onDelete: (id: string) => void,
+  onUpdate: (id: string, changes: { content?: string; notes?: string }) => void
+): Node<CardNodeData> {
   return {
     id: card.id,
     type: 'card',
     position: { x: card.x, y: card.y },
-    data: { card, onDelete },
+    data: { card, onDelete, onUpdate },
     draggable: true,
   };
 }
@@ -84,13 +88,23 @@ function CanvasInner({ collage, initialCards }: Props) {
     });
   }, []);
 
+  const handleUpdate = useCallback(
+    (id: string, changes: { content?: string; notes?: string }) => {
+      setCards((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, ...changes } : c))
+      );
+      updateCardText(id, changes);
+    },
+    []
+  );
+
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(
-    initialCards.map((c) => cardToNode(c, handleDelete))
+    initialCards.map((c) => cardToNode(c, handleDelete, handleUpdate))
   );
 
   useEffect(() => {
-    setRfNodes(cards.map((c) => cardToNode(c, handleDelete)));
-  }, [cards, handleDelete, setRfNodes]);
+    setRfNodes(cards.map((c) => cardToNode(c, handleDelete, handleUpdate)));
+  }, [cards, handleDelete, handleUpdate, setRfNodes]);
 
   useEffect(() => {
     const socket = getSocket();

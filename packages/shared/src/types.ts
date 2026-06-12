@@ -1,4 +1,4 @@
-export type CardType = 'LINK' | 'NOTE';
+export type CardType = 'LINK' | 'NOTE' | 'IMAGE';
 export type CardSource = 'DISCORD' | 'WEBAPP';
 
 export interface Collage {
@@ -13,6 +13,7 @@ export interface Card {
   collageId: string;
   type: CardType;
   content: string | null;
+  notes: string | null;
   url: string | null;
   ogTitle: string | null;
   ogDescription: string | null;

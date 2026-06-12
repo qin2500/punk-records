@@ -9,9 +9,11 @@
   },
   "dependencies": {
     "@punk-records/shared": "*",
+    "@types/multer": "^2.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "multer": "^2.1.1",
     "open-graph-scraper": "^6.3.3",
     "socket.io": "^4.7.5",
     "zod": "^3.23.8"

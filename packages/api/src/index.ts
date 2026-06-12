@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import http from 'http';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import { Server } from 'socket.io';
@@ -7,6 +8,7 @@ import type { ServerToClientEvents, ClientToServerEvents } from '@punk-records/s
 import collagesRouter from './routes/collages';
 import { collageCardsRouter, cardRouter } from './routes/cards';
 import internalRouter from './routes/internal';
+import { uploadRouter } from './routes/upload';
 import { setIo } from './socket/emitter';
 
 const app = express();
@@ -23,6 +25,7 @@ setIo(io);
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
@@ -31,6 +34,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/collages', collagesRouter);
 app.use('/api/collages', collageCardsRouter);
 app.use('/api/cards', cardRouter);
+app.use('/api/upload', uploadRouter);
 app.use('/internal', internalRouter);
 
 io.on('connection', (socket) => {

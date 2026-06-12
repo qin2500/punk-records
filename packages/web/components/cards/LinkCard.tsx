@@ -1,31 +1,68 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import type { Card } from '@punk-records/shared';
 import SkeletonCard from './SkeletonCard';
 
 interface Props {
   card: Card;
   onDelete: (id: string) => void;
+  onUpdate: (id: string, changes: { notes?: string }) => void;
 }
 
 function isAbsoluteUrl(url: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
-export default function LinkCard({ card, onDelete }: Props) {
-  // Show skeleton only for cards created in the last 15s with no OG data yet
+export default function LinkCard({ card, onDelete, onUpdate }: Props) {
   const ageSeconds = (Date.now() - new Date(card.createdAt).getTime()) / 1000;
   const isLoading = !card.ogTitle && !card.ogImage && ageSeconds < 15;
 
-  if (isLoading) return <SkeletonCard />;
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(card.notes ?? '');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!editingNote) setNoteDraft(card.notes ?? '');
+  }, [card.notes, editingNote]);
+
+  useEffect(() => {
+    if (editingNote) {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        el.selectionStart = el.selectionEnd = el.value.length;
+      }
+    }
+  }, [editingNote]);
+
+  const saveNote = () => {
+    setEditingNote(false);
+    const trimmed = noteDraft.trim();
+    if (trimmed !== (card.notes ?? '').trim()) {
+      onUpdate(card.id, { notes: trimmed });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') {
+      setNoteDraft(card.notes ?? '');
+      setEditingNote(false);
+    } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      saveNote();
+    }
+  };
+
+  if (isLoading) return <SkeletonCard onDelete={() => onDelete(card.id)} />;
 
   const domain = card.url
     ? new URL(card.url).hostname.replace(/^www\./, '')
     : card.ogSiteName ?? '';
 
-  // Only use ogImage if it's an absolute URL — scrapers sometimes return relative paths
   const image = card.ogImage && isAbsoluteUrl(card.ogImage) ? card.ogImage : null;
   const favicon = card.ogFavicon && isAbsoluteUrl(card.ogFavicon) ? card.ogFavicon : null;
+  const hasNote = Boolean(card.notes);
 
   return (
     <div className="group relative w-[280px] rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 hover:border-zinc-600 transition-colors">
@@ -56,9 +93,39 @@ export default function LinkCard({ card, onDelete }: Props) {
           </p>
         )}
         {card.ogDescription && (
-          <p className="text-xs text-zinc-400 line-clamp-2">
-            {card.ogDescription}
-          </p>
+          <p className="text-xs text-zinc-400 line-clamp-2">{card.ogDescription}</p>
+        )}
+      </div>
+
+      {/* Notes section */}
+      <div className="border-t border-zinc-800">
+        {editingNote ? (
+          <div className="p-2">
+            <textarea
+              ref={textareaRef}
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              onBlur={saveNote}
+              onKeyDown={handleKeyDown}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="nodrag nopan w-full bg-transparent text-xs text-zinc-200 leading-relaxed resize-none focus:outline-none placeholder-zinc-600"
+              placeholder="Add a note..."
+              rows={3}
+            />
+            <p className="text-[10px] text-zinc-600 text-right mt-0.5">⌘↵ to save · Esc to cancel</p>
+          </div>
+        ) : (
+          <button
+            onClick={() => setEditingNote(true)}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="nodrag nopan w-full text-left px-3 py-2 text-xs leading-relaxed transition-colors hover:bg-zinc-800/50"
+          >
+            {hasNote ? (
+              <span className="text-zinc-300 whitespace-pre-wrap break-words">{card.notes}</span>
+            ) : (
+              <span className="text-zinc-600 italic">Add a note...</span>
+            )}
+          </button>
         )}
       </div>
 

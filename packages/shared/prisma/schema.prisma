@@ -22,6 +22,7 @@ model Card {
 
   type             CardType
   content          String?
+  notes            String?
   url              String?
 
   ogTitle          String?
@@ -44,6 +45,7 @@ model Card {
 enum CardType {
   LINK
   NOTE
+  IMAGE
 }
 
 enum CardSource {

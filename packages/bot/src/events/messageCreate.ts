@@ -18,6 +18,39 @@ export async function handleMessageCreate(message: Message): Promise<void> {
   if (!collage) return;
 
   const { goldenAnglePosition } = await import('../layout');
+  const { emitCardCreated } = await import('../socketClient');
+
+  // Handle image attachments — one card per image
+  const imageAttachments = [...message.attachments.values()].filter(
+    (a) => a.contentType?.startsWith('image/')
+  );
+
+  if (imageAttachments.length > 0) {
+    let cardCount = collage._count.cards;
+    const noteText = message.content.trim() || null;
+
+    for (const attachment of imageAttachments) {
+      const { x, y } = goldenAnglePosition(cardCount++);
+      const card = await prisma.card.create({
+        data: {
+          collageId: collage.id,
+          type: 'IMAGE',
+          url: attachment.url,
+          notes: noteText,
+          x,
+          y,
+          source: 'DISCORD',
+          discordMessageId: message.id,
+        },
+      });
+      try {
+        emitCardCreated(collage.id, card as any);
+      } catch {}
+    }
+    return;
+  }
+
+  // No image — existing LINK / NOTE logic
   const n = collage._count.cards;
   const { x, y } = goldenAnglePosition(n);
 
@@ -37,9 +70,7 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     },
   });
 
-  // Emit card:created via API emitter (shared socket)
   try {
-    const { emitCardCreated } = await import('../socketClient');
     emitCardCreated(collage.id, card as any);
   } catch {}
 
