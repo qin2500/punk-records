@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    env_file: .env.production
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+
+  bot:
+    build:
+      context: .
+      dockerfile: packages/bot/Dockerfile
+    env_file: .env.production
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      # Bot talks to the API via the internal Docker network, not through the tunnel
+      - API_URL=http://api:3001
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - api
