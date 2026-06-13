@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import http from 'http';
-import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import { Server } from 'socket.io';
@@ -25,7 +24,6 @@ setIo(io);
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });

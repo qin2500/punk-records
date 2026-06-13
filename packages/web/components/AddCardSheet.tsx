@@ -75,7 +75,7 @@ export default function AddCardSheet({ collage, open, onClose }: Props) {
       if (tab === 'IMAGE') {
         let url = imageUrl.trim();
         if (imageFile) {
-          url = await uploadImage(imageFile);
+          url = await uploadImage(imageFile, collage.id);
         }
         if (!url) { setError('Add an image or paste a URL.'); return; }
         await createCard(collage.id, { type: 'IMAGE', url });

@@ -22,11 +22,15 @@ export async function fetchCards(collageId: string): Promise<Card[]> {
   return res.json();
 }
 
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(file: File, collageId: string): Promise<string> {
   const form = new FormData();
   form.append('file', file);
+  form.append('collageId', collageId);
   const res = await fetch(`${API}/api/upload`, { method: 'POST', body: form });
-  if (!res.ok) throw new Error('Failed to upload image');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error ?? 'Failed to upload image');
+  }
   const data = await res.json();
   return data.url as string;
 }
