@@ -28,7 +28,7 @@ uploadRouter.post('/', upload.single('file'), async (req, res) => {
   // Post the image to the collage's Discord channel as the bot.
   // The bot's messageCreate handler ignores messages from bot users, so no duplicate card.
   const formData = new FormData();
-  const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+  const blob = new Blob([new Uint8Array(req.file.buffer)], { type: req.file.mimetype });
   formData.append('files[0]', blob, req.file.originalname || 'image');
 
   const discordRes = await fetch(

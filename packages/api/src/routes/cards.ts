@@ -10,6 +10,7 @@ import {
   emitCardMoved,
 } from '../socket/emitter';
 import type { Card } from '@punk-records/shared';
+import type { Card as PrismaCard } from '@prisma/client';
 
 const URL_REGEX = /^https?:\/\//i;
 
@@ -52,7 +53,7 @@ collageCardsRouter.post('/:collageId/cards', async (req, res) => {
     const n = collage._count.cards;
     const { x, y } = goldenAnglePosition(n);
 
-    let card;
+    let card: PrismaCard;
 
     if (parsed.data.type === 'IMAGE') {
       card = await prisma.card.create({
