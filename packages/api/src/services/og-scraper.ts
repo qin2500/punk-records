@@ -70,18 +70,18 @@ async function scrapeImdb(url: string): Promise<OgData> {
 
   const html = await res.text();
 
-  // IMDB embeds JSON-LD structured data — prefer it over OG tags
-  const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-  if (jsonLdMatch) {
+  // IMDB pages have multiple JSON-LD blocks (breadcrumb, then the title entity).
+  // Iterate all blocks and use the first one that has a `name` field.
+  const jsonLdRe = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
+  let m: RegExpExecArray | null;
+  while ((m = jsonLdRe.exec(html)) !== null) {
     try {
-      const data = JSON.parse(jsonLdMatch[1]) as {
+      const data = JSON.parse(m[1]) as {
         name?: string;
         description?: string;
         image?: string | { url?: string };
       };
-      const image = typeof data.image === 'string'
-        ? data.image
-        : data.image?.url;
+      const image = typeof data.image === 'string' ? data.image : data.image?.url;
       if (data.name) {
         return {
           ogTitle: data.name,
@@ -91,19 +91,24 @@ async function scrapeImdb(url: string): Promise<OgData> {
         };
       }
     } catch {
-      // fall through to OG tag extraction
+      continue;
     }
   }
 
-  // Fallback: parse OG tags from raw HTML
-  const titleMatch = html.match(/<meta property="og:title" content="([^"]*?)"/);
-  const imageMatch = html.match(/<meta property="og:image" content="([^"]*?)"/);
-  const descMatch = html.match(/<meta property="og:description" content="([^"]*?)"/);
+  // Fallback: parse OG tags — handle both attribute orders and quote styles
+  const extractOg = (prop: string): string | undefined => {
+    const re = new RegExp(
+      `<meta[^>]+(?:property=["']${prop}["'][^>]+content=["']([^"']+)["']|content=["']([^"']+)["'][^>]+property=["']${prop}["'])`,
+      'is'
+    );
+    const match = html.match(re);
+    return match?.[1] ?? match?.[2];
+  };
 
   return {
-    ogTitle: titleMatch?.[1],
-    ogDescription: descMatch?.[1],
-    ogImage: imageMatch?.[1],
+    ogTitle: extractOg('og:title'),
+    ogDescription: extractOg('og:description'),
+    ogImage: extractOg('og:image'),
     ogSiteName: 'IMDb',
   };
 }
