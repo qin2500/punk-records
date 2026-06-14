@@ -14,6 +14,24 @@ function isAbsoluteUrl(url: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
+function getYouTubeThumbnail(url: string): string | null {
+  try {
+    const u = new URL(url);
+    let videoId: string | null = null;
+    if (u.hostname === 'youtu.be') {
+      videoId = u.pathname.slice(1).split('?')[0];
+    } else if (u.hostname.includes('youtube.com')) {
+      videoId = u.searchParams.get('v');
+      if (!videoId && (u.pathname.startsWith('/shorts/') || u.pathname.startsWith('/embed/'))) {
+        videoId = u.pathname.split('/').pop() ?? null;
+      }
+    }
+    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function LinkCard({ card, onDelete, onUpdate }: Props) {
   const ageSeconds = (Date.now() - new Date(card.createdAt).getTime()) / 1000;
   const isLoading = !card.ogTitle && !card.ogImage && ageSeconds < 15;
@@ -60,7 +78,9 @@ export default function LinkCard({ card, onDelete, onUpdate }: Props) {
     ? new URL(card.url).hostname.replace(/^www\./, '')
     : card.ogSiteName ?? '';
 
-  const image = card.ogImage && isAbsoluteUrl(card.ogImage) ? card.ogImage : null;
+  const image = (card.ogImage && isAbsoluteUrl(card.ogImage))
+    ? card.ogImage
+    : (card.url ? getYouTubeThumbnail(card.url) : null);
   const favicon = card.ogFavicon && isAbsoluteUrl(card.ogFavicon) ? card.ogFavicon : null;
   const hasNote = Boolean(card.notes);
 
