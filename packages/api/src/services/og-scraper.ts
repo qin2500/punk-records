@@ -55,62 +55,36 @@ async function scrapeTwitter(url: string): Promise<OgData> {
   };
 }
 
-const BROWSER_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.5',
-};
+const IMDB_TITLE_RE = /\/title\/(tt\d+)/i;
 
 async function scrapeImdb(url: string): Promise<OgData> {
-  const res = await fetch(url, {
-    headers: BROWSER_HEADERS,
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) return {};
+  const omdbKey = process.env.OMDB_API_KEY;
+  const titleMatch = url.match(IMDB_TITLE_RE);
 
-  const html = await res.text();
-
-  // IMDB pages have multiple JSON-LD blocks (breadcrumb, then the title entity).
-  // Iterate all blocks and use the first one that has a `name` field.
-  const jsonLdRe = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
-  let m: RegExpExecArray | null;
-  while ((m = jsonLdRe.exec(html)) !== null) {
-    try {
-      const data = JSON.parse(m[1]) as {
-        name?: string;
-        description?: string;
-        image?: string | { url?: string };
+  if (omdbKey && titleMatch) {
+    const res = await fetch(
+      `https://www.omdbapi.com/?i=${titleMatch[1]}&apikey=${omdbKey}`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+    if (res.ok) {
+      const data = await res.json() as {
+        Response: string;
+        Title?: string;
+        Plot?: string;
+        Poster?: string;
       };
-      const image = typeof data.image === 'string' ? data.image : data.image?.url;
-      if (data.name) {
+      if (data.Response === 'True') {
         return {
-          ogTitle: data.name,
-          ogDescription: data.description,
-          ogImage: image,
+          ogTitle: data.Title,
+          ogDescription: data.Plot,
+          ogImage: data.Poster !== 'N/A' ? data.Poster : undefined,
           ogSiteName: 'IMDb',
         };
       }
-    } catch {
-      continue;
     }
   }
 
-  // Fallback: parse OG tags — handle both attribute orders and quote styles
-  const extractOg = (prop: string): string | undefined => {
-    const re = new RegExp(
-      `<meta[^>]+(?:property=["']${prop}["'][^>]+content=["']([^"']+)["']|content=["']([^"']+)["'][^>]+property=["']${prop}["'])`,
-      'is'
-    );
-    const match = html.match(re);
-    return match?.[1] ?? match?.[2];
-  };
-
-  return {
-    ogTitle: extractOg('og:title'),
-    ogDescription: extractOg('og:description'),
-    ogImage: extractOg('og:image'),
-    ogSiteName: 'IMDb',
-  };
+  return {};
 }
 
 export async function scrapeOg(url: string): Promise<OgData> {
