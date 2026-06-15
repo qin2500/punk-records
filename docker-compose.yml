@@ -1,5 +1,6 @@
 services:
   api:
+    image: ghcr.io/qin2500/punk-records/api:latest
     build:
       context: .
       dockerfile: packages/api/Dockerfile
@@ -7,8 +8,14 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   bot:
+    image: ghcr.io/qin2500/punk-records/bot:latest
     build:
       context: .
       dockerfile: packages/bot/Dockerfile
@@ -19,6 +26,11 @@ services:
     environment:
       # Bot talks to the API via the internal Docker network, not through the tunnel
       - API_URL=http://api:3001
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   tunnel:
     image: cloudflare/cloudflared:latest
@@ -28,3 +40,8 @@ services:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - api
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

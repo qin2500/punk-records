@@ -1,0 +1,93 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: packages/api/Dockerfile
+          push: true
+          tags: ghcr.io/qin2500/punk-records/api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Bot
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: packages/bot/Dockerfile
+          push: true
+          tags: ghcr.io/qin2500/punk-records/bot:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Deploy via bastion
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          proxy_host: ${{ vars.BASTION_HOST }}
+          proxy_username: ubuntu
+          proxy_key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+
+            # Clone repo on first deploy; pull latest compose file on subsequent deploys
+            if [ ! -d /home/ubuntu/punk-records ]; then
+              git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/qin2500/punk-records.git /home/ubuntu/punk-records
+            else
+              cd /home/ubuntu/punk-records
+              git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/qin2500/punk-records.git
+              git pull origin main
+              git remote set-url origin https://github.com/qin2500/punk-records.git
+            fi
+
+            cd /home/ubuntu/punk-records
+
+            # Write env file (overwrites on every deploy so secrets stay current)
+            cat > .env.production << 'PUNK_RECORDS_EOF'
+            ${{ secrets.ENV_PRODUCTION }}
+            PUNK_RECORDS_EOF
+
+            # Pull latest images (EC2 never builds — images come from GHCR)
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker logout ghcr.io
+
+            # Remove dangling images from previous deploy to protect disk space
+            docker system prune -f
+
+            # Restart services with new images
+            docker compose up -d
