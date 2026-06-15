@@ -90,4 +90,4 @@ jobs:
             docker system prune -f
 
             # Restart services with new images
-            docker compose up -d
+            docker compose --env-file .env.production up -d
