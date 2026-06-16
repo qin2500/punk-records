@@ -42,9 +42,13 @@ async function scrapeTwitter(url: string): Promise<OgData> {
     ? `${tweet.author.name} @${tweet.author.screen_name}`
     : undefined;
 
+  // Only use actual tweet media photos, not Twitter Card thumbnails or
+  // profile-picture-update tweets (those have /profile_images/ URLs)
+  const mediaPhoto = tweet.media?.photos?.find(p => p.url.includes('/media/'));
+
   const thumbnail =
     tweet.media?.videos?.[0]?.thumbnail_url ??
-    tweet.media?.photos?.[0]?.url ??
+    mediaPhoto?.url ??
     undefined;
 
   return {
@@ -82,6 +86,34 @@ async function scrapeImdb(url: string): Promise<OgData> {
         };
       }
     }
+  }
+
+  // Fallback: scrape IMDb's own OG tags (works when Cloudflare allows it)
+  const { result } = await ogs({
+    url,
+    timeout: 10000,
+    fetchOptions: {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    },
+  });
+
+  const image =
+    result.ogImage && Array.isArray(result.ogImage) && result.ogImage[0]
+      ? result.ogImage[0].url
+      : typeof result.ogImage === 'object' && result.ogImage !== null
+      ? (result.ogImage as { url?: string }).url
+      : undefined;
+
+  if (result.ogTitle || image) {
+    return {
+      ogTitle: result.ogTitle?.replace(/ [-–] IMDb$/, ''),
+      ogDescription: result.ogDescription,
+      ogImage: image,
+      ogSiteName: 'IMDb',
+    };
   }
 
   return {};
