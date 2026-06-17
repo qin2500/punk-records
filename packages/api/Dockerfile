@@ -26,4 +26,4 @@ RUN npm run build --workspace=packages/api
 
 EXPOSE 3001
 
-CMD ["node", "packages/api/dist/index.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=packages/shared/prisma/schema.prisma && node packages/api/dist/index.js"]
