@@ -5,6 +5,7 @@ export interface Collage {
   id: string;
   name: string;
   discordChannelId: string;
+  isPrivate: boolean;
   createdAt: string;
 }
 

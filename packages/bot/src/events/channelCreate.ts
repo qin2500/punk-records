@@ -1,7 +1,7 @@
 import type { NonThreadGuildBasedChannel } from 'discord.js';
 import { ChannelType } from 'discord.js';
 import { prisma } from '@punk-records/shared';
-import { isCanvasChannel, channelNameToCollageName } from '../utils';
+import { isCanvasChannel, isPrivateChannel, channelNameToCollageName } from '../utils';
 
 export async function handleChannelCreate(
   channel: NonThreadGuildBasedChannel
@@ -13,6 +13,7 @@ export async function handleChannelCreate(
     data: {
       name: channelNameToCollageName(channel.name),
       discordChannelId: channel.id,
+      isPrivate: isPrivateChannel(channel.name),
     },
   });
 

@@ -11,11 +11,35 @@ interface Props {
 
 const MAX_TABS = 3;
 
+function CollageIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="6" height="6" rx="1.5" />
+      <rect x="9" y="1" width="6" height="6" rx="1.5" />
+      <rect x="1" y="9" width="6" height="6" rx="1.5" />
+      <rect x="9" y="9" width="6" height="6" rx="1.5" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1.5V4.5A3.5 3.5 0 0 0 8 1zm0 1.5A2 2 0 0 1 10 4.5V6H6V4.5A2 2 0 0 1 8 3.5zM8 9a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+    </svg>
+  );
+}
+
 export default function BottomTabBar({ collages, activeId }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const visibleCollages = collages.slice(0, MAX_TABS);
-  const overflow = collages.slice(MAX_TABS);
+  const publicCollages = collages.filter((c) => !c.isPrivate);
+  const privateCollages = collages.filter((c) => c.isPrivate);
+
+  // Show public collages first in tabs, then private
+  const allOrdered = [...publicCollages, ...privateCollages];
+  const visibleCollages = allOrdered.slice(0, MAX_TABS);
+  const overflow = allOrdered.slice(MAX_TABS);
 
   return (
     <>
@@ -31,12 +55,7 @@ export default function BottomTabBar({ collages, activeId }: Props) {
             }`}
           >
             <span className="w-4 h-4 mb-0.5">
-              <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <rect x="1" y="1" width="6" height="6" rx="1.5" />
-                <rect x="9" y="1" width="6" height="6" rx="1.5" />
-                <rect x="1" y="9" width="6" height="6" rx="1.5" />
-                <rect x="9" y="9" width="6" height="6" rx="1.5" />
-              </svg>
+              {c.isPrivate ? <LockIcon /> : <CollageIcon />}
             </span>
             <span className="truncate max-w-[60px]">{c.name}</span>
           </Link>
@@ -70,23 +89,53 @@ export default function BottomTabBar({ collages, activeId }: Props) {
                 ×
               </button>
             </div>
-            <ul className="p-2 space-y-0.5">
-              {collages.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={`/canvas/${c.id}`}
-                    onClick={() => setDrawerOpen(false)}
-                    className={`block px-4 py-3 rounded-xl text-sm transition-colors min-h-[44px] flex items-center ${
-                      c.id === activeId
-                        ? 'bg-violet-600/20 text-violet-300'
-                        : 'text-zinc-300 hover:bg-zinc-800'
-                    }`}
-                  >
-                    {c.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+
+            {publicCollages.length > 0 && (
+              <ul className="p-2 space-y-0.5">
+                {publicCollages.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/canvas/${c.id}`}
+                      onClick={() => setDrawerOpen(false)}
+                      className={`flex items-center px-4 py-3 rounded-xl text-sm transition-colors min-h-[44px] ${
+                        c.id === activeId
+                          ? 'bg-violet-600/20 text-violet-300'
+                          : 'text-zinc-300 hover:bg-zinc-800'
+                      }`}
+                    >
+                      {c.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {privateCollages.length > 0 && (
+              <>
+                <p className="px-4 pt-3 pb-1 text-xs font-semibold text-zinc-600 uppercase tracking-wider">
+                  Private
+                </p>
+                <ul className="p-2 space-y-0.5">
+                  {privateCollages.map((c) => (
+                    <li key={c.id}>
+                      <Link
+                        href={`/canvas/${c.id}`}
+                        onClick={() => setDrawerOpen(false)}
+                        className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-colors min-h-[44px] ${
+                          c.id === activeId
+                            ? 'bg-violet-600/20 text-violet-300'
+                            : 'text-zinc-300 hover:bg-zinc-800'
+                        }`}
+                      >
+                        <span className="w-3.5 h-3.5 opacity-50 shrink-0"><LockIcon /></span>
+                        {c.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
             <div className="h-6" />
           </div>
         </>

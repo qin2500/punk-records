@@ -12,6 +12,7 @@ model Collage {
   id               String   @id @default(cuid())
   name             String
   discordChannelId String   @unique
+  isPrivate        Boolean  @default(false)
   createdAt        DateTime @default(now())
   cards            Card[]
 }

@@ -1,7 +1,12 @@
 export const CANVAS_PREFIX = 'canvas-';
+export const PRIVATE_PREFIX = 'canvas-p';
 
 export function isCanvasChannel(name: string): boolean {
   return name.startsWith(CANVAS_PREFIX);
+}
+
+export function isPrivateChannel(name: string): boolean {
+  return name.startsWith(PRIVATE_PREFIX);
 }
 
 export function channelNameToCollageName(channelName: string): string {

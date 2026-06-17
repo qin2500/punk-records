@@ -47,6 +47,7 @@ export async function handleMessageCreate(message: Message): Promise<void> {
         emitCardCreated(collage.id, card as any);
       } catch {}
     }
+    // Images are kept in Discord (we rely on Discord to host them)
     return;
   }
 
@@ -76,5 +77,10 @@ export async function handleMessageCreate(message: Message): Promise<void> {
 
   if (isLink && url) {
     scrapeAndUpdateCard(card.id, collage.id, url).catch(() => {});
+  }
+
+  // Private canvases: delete the original message once the card is saved
+  if (collage.isPrivate) {
+    message.delete().catch(() => {});
   }
 }
