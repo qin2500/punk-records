@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Card, Collage } from '@punk-records/shared';
 import { getSocket } from '../lib/socket';
 import Canvas from './Canvas';
@@ -21,6 +22,7 @@ export default function CanvasPageClient({
   initialCards,
   allCollages,
 }: Props) {
+  const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [collages, setCollages] = useState<Collage[]>(allCollages);
   const { isUnlocked, keepOpen, keepMinutesLeft, unlock, setKeepOpen, lock } =
@@ -37,7 +39,15 @@ export default function CanvasPageClient({
     });
 
     socket.on('collage:deleted', ({ collageId }) => {
-      setCollages((prev) => prev.filter((c) => c.id !== collageId));
+      setCollages((prev) => {
+        const next = prev.filter((c) => c.id !== collageId);
+        if (collageId === collage.id) {
+          // Current canvas was deleted — navigate away
+          const fallback = next[0];
+          router.replace(fallback ? `/canvas/${fallback.id}` : '/');
+        }
+        return next;
+      });
     });
 
     socket.on('collage:renamed', ({ collageId, name }) => {

@@ -1,5 +1,5 @@
 export const CANVAS_PREFIX = 'canvas-';
-export const PRIVATE_PREFIX = 'canvas-p';
+export const PRIVATE_PREFIX = 'canvas-private-';
 
 export function isCanvasChannel(name: string): boolean {
   return name.startsWith(CANVAS_PREFIX);
