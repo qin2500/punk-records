@@ -86,8 +86,8 @@ jobs:
             docker compose pull
             docker logout ghcr.io
 
-            # Remove dangling images from previous deploy to protect disk space
-            docker system prune -f
-
             # Restart services with new images
             docker compose --env-file .env.production up -d
+
+            # Remove images no longer used by any container (runs after up so new images are active)
+            docker image prune -af
