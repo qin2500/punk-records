@@ -76,3 +76,9 @@ export async function updateCardText(
 export async function deleteCard(cardId: string): Promise<void> {
   await fetch(`${API}/api/cards/${cardId}`, { method: 'DELETE' });
 }
+
+export async function rescrapeCard(cardId: string): Promise<Card> {
+  const res = await fetch(`${API}/api/cards/${cardId}/rescrape`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to refresh card preview');
+  return res.json();
+}

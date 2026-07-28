@@ -7,6 +7,7 @@ import ImageCard from './cards/ImageCard';
 import ImdbCard from './cards/ImdbCard';
 import LinkCard from './cards/LinkCard';
 import NoteCard from './cards/NoteCard';
+import RedditCard from './cards/RedditCard';
 import TwitterCard from './cards/TwitterCard';
 
 export type CardNodeData = {
@@ -17,6 +18,7 @@ export type CardNodeData = {
 
 const TWITTER_RE = /^https?:\/\/(www\.)?(twitter\.com|x\.com)\//i;
 const IMDB_RE = /^https?:\/\/(www\.)?imdb\.com\//i;
+const REDDIT_RE = /^https?:\/\/(www\.|old\.|new\.|m\.)?(reddit\.com|redd\.it)\//i;
 
 const CardNode = memo(function CardNode({ data }: NodeProps<CardNodeData>) {
   const { card, onDelete, onUpdate } = data;
@@ -25,6 +27,7 @@ const CardNode = memo(function CardNode({ data }: NodeProps<CardNodeData>) {
   if (card.type === 'IMAGE') return <ImageCard card={card} onDelete={onDelete} onUpdate={onUpdate} />;
   if (card.url && TWITTER_RE.test(card.url)) return <TwitterCard card={card} onDelete={onDelete} onUpdate={onUpdate} />;
   if (card.url && IMDB_RE.test(card.url)) return <ImdbCard card={card} onDelete={onDelete} onUpdate={onUpdate} />;
+  if (card.url && REDDIT_RE.test(card.url)) return <RedditCard card={card} onDelete={onDelete} onUpdate={onUpdate} />;
   return <LinkCard card={card} onDelete={onDelete} onUpdate={onUpdate} />;
 });
 

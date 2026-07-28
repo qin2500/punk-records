@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Card } from '@punk-records/shared';
 import SkeletonCard from './SkeletonCard';
+import RefreshButton from './RefreshButton';
+import { useRescrape } from '../../lib/useRescrape';
 
 interface Props {
   card: Card;
@@ -17,6 +19,7 @@ export default function ImdbCard({ card, onDelete, onUpdate }: Props) {
   const [editingNote, setEditingNote] = useState(false);
   const [noteDraft, setNoteDraft] = useState(card.notes ?? '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { state: refreshState, refresh } = useRescrape(card.id);
 
   useEffect(() => {
     if (!editingNote) setNoteDraft(card.notes ?? '');
@@ -112,6 +115,8 @@ export default function ImdbCard({ card, onDelete, onUpdate }: Props) {
           </button>
         )}
       </div>
+
+      <RefreshButton state={refreshState} onClick={refresh} />
 
       <button
         onClick={() => onDelete(card.id)}

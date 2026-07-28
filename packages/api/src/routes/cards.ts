@@ -158,6 +158,36 @@ cardRouter.patch('/:cardId', async (req, res) => {
   }
 });
 
+cardRouter.post('/:cardId/rescrape', async (req, res) => {
+  try {
+    const card = await prisma.card.findUnique({ where: { id: req.params.cardId } });
+    if (!card) return res.status(404).json({ error: 'Card not found' });
+    if (card.type !== 'LINK' || !card.url) {
+      return res.status(400).json({ error: 'Card is not a link' });
+    }
+
+    const ogData = await scrapeOg(card.url);
+    if (Object.keys(ogData).length === 0) {
+      return res.status(502).json({ error: 'Could not fetch preview data for this link' });
+    }
+
+    const updated = await prisma.card.update({
+      where: { id: card.id },
+      data: {
+        ogTitle: ogData.ogTitle ?? null,
+        ogDescription: ogData.ogDescription ?? null,
+        ogImage: ogData.ogImage ?? null,
+        ogSiteName: ogData.ogSiteName ?? null,
+        ogFavicon: ogData.ogFavicon ?? null,
+      },
+    });
+    emitCardUpdated(updated.collageId, updated.id, updated as unknown as Partial<Card>);
+    res.json(updated);
+  } catch {
+    res.status(500).json({ error: 'Failed to rescrape card' });
+  }
+});
+
 cardRouter.delete('/:cardId', async (req, res) => {
   try {
     const card = await prisma.card.delete({ where: { id: req.params.cardId } });

@@ -12,31 +12,17 @@ interface Props {
   onUpdate: (id: string, changes: { notes?: string }) => void;
 }
 
-function isAbsoluteUrl(url: string): boolean {
-  return url.startsWith('http://') || url.startsWith('https://');
+function RedditLogo() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current shrink-0" aria-hidden="true">
+      <path d="M12 2a2 2 0 0 1 2 2c0 .5-.2.95-.5 1.3l1.9 3.9a7 7 0 0 1 2.5.6c.3-.4.9-.7 1.5-.7a2 2 0 1 1-1.2 3.6c.1.4.2.8.2 1.3 0 3.3-3.8 6-8.4 6s-8.4-2.7-8.4-6c0-.5.1-.9.2-1.3A2 2 0 1 1 3 10.9c.6 0 1.2.3 1.5.7a7 7 0 0 1 2.5-.6l1.9-3.9c-.3-.35-.5-.8-.5-1.3a2 2 0 0 1 2-2 2 2 0 0 1 1.6.8c.6-.4 1.4-.7 2.4-.8A2 2 0 0 1 12 2zM8.7 13.5a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm6.6 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm-6.9 4.2a.5.5 0 0 0-.4.85c1 .9 2.6 1.4 4 1.4s3-.5 4-1.4a.5.5 0 1 0-.7-.7c-.8.75-2.1 1.15-3.3 1.15s-2.5-.4-3.3-1.15a.5.5 0 0 0-.3-.15z" />
+    </svg>
+  );
 }
 
-function getYouTubeThumbnail(url: string): string | null {
-  try {
-    const u = new URL(url);
-    let videoId: string | null = null;
-    if (u.hostname === 'youtu.be') {
-      videoId = u.pathname.slice(1).split('?')[0];
-    } else if (u.hostname.includes('youtube.com')) {
-      videoId = u.searchParams.get('v');
-      if (!videoId && (u.pathname.startsWith('/shorts/') || u.pathname.startsWith('/embed/'))) {
-        videoId = u.pathname.split('/').pop() ?? null;
-      }
-    }
-    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-  } catch {
-    return null;
-  }
-}
-
-export default function LinkCard({ card, onDelete, onUpdate }: Props) {
+export default function RedditCard({ card, onDelete, onUpdate }: Props) {
   const ageSeconds = (Date.now() - new Date(card.createdAt).getTime()) / 1000;
-  const isLoading = !card.ogTitle && !card.ogImage && ageSeconds < 15;
+  const isLoading = !card.ogTitle && !card.ogImage && !card.ogDescription && ageSeconds < 15;
 
   const [editingNote, setEditingNote] = useState(false);
   const [noteDraft, setNoteDraft] = useState(card.notes ?? '');
@@ -77,48 +63,40 @@ export default function LinkCard({ card, onDelete, onUpdate }: Props) {
 
   if (isLoading) return <SkeletonCard onDelete={() => onDelete(card.id)} />;
 
-  const domain = card.url
-    ? new URL(card.url).hostname.replace(/^www\./, '')
-    : card.ogSiteName ?? '';
-
-  const image = (card.ogImage && isAbsoluteUrl(card.ogImage))
-    ? card.ogImage
-    : (card.url ? getYouTubeThumbnail(card.url) : null);
-  const favicon = card.ogFavicon && isAbsoluteUrl(card.ogFavicon) ? card.ogFavicon : null;
   const hasNote = Boolean(card.notes);
 
   return (
-    <div className="group relative w-[280px] rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 hover:border-zinc-600 transition-colors">
-      {image && (
+    <div className="group relative w-[280px] rounded-xl border border-zinc-800 bg-zinc-900 hover:border-zinc-600 transition-colors overflow-hidden">
+      <div className="p-3 space-y-2">
+        <div className="flex items-center gap-1.5 text-xs text-orange-500">
+          <RedditLogo />
+          <span className="font-medium truncate">{card.ogSiteName ?? 'reddit'}</span>
+        </div>
+
+        {card.ogTitle && (
+          <p className="text-sm font-medium leading-snug text-zinc-100 line-clamp-3">
+            {card.ogTitle}
+          </p>
+        )}
+
+        {card.ogDescription ? (
+          <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap break-words line-clamp-6">
+            {card.ogDescription}
+          </p>
+        ) : !card.ogImage ? (
+          <p className="text-sm text-zinc-500 italic">Link post</p>
+        ) : null}
+      </div>
+
+      {card.ogImage && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={image}
+          src={card.ogImage}
           alt=""
-          className="w-full h-36 object-cover"
+          className="w-full object-cover max-h-40"
           loading="lazy"
         />
       )}
-      <div className="p-3 space-y-1">
-        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-          {favicon && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={favicon} alt="" className="w-3 h-3" />
-          )}
-          <span className="truncate">{domain}</span>
-        </div>
-        {card.ogTitle ? (
-          <p className="text-sm font-medium leading-snug line-clamp-2 text-zinc-100">
-            {card.ogTitle}
-          </p>
-        ) : (
-          <p className="text-sm font-medium leading-snug line-clamp-2 text-zinc-400 italic">
-            {domain}
-          </p>
-        )}
-        {card.ogDescription && (
-          <p className="text-xs text-zinc-400 line-clamp-2">{card.ogDescription}</p>
-        )}
-      </div>
 
       {/* Notes section */}
       <div className="border-t border-zinc-800">
