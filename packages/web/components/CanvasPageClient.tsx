@@ -9,6 +9,7 @@ import AddCardSheet from './AddCardSheet';
 import CollageNav from './CollageNav';
 import BottomTabBar from './BottomTabBar';
 import PrivateGate from './PrivateGate';
+import DataMenu from './DataMenu';
 import { usePrivateUnlock } from '../hooks/usePrivateUnlock';
 
 interface Props {
@@ -24,6 +25,7 @@ export default function CanvasPageClient({
 }: Props) {
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [dataMenuOpen, setDataMenuOpen] = useState(false);
   const [collages, setCollages] = useState<Collage[]>(allCollages);
   const { isUnlocked, keepOpen, keepMinutesLeft, unlock, setKeepOpen, lock } =
     usePrivateUnlock();
@@ -56,10 +58,18 @@ export default function CanvasPageClient({
       );
     });
 
+    // A full workspace import replaced everything server-side — every
+    // client (not just the one that triggered it) needs a clean reload
+    // rather than trying to reconcile incremental state.
+    socket.on('workspace:imported', () => {
+      window.location.reload();
+    });
+
     return () => {
       socket.off('collage:created');
       socket.off('collage:deleted');
       socket.off('collage:renamed');
+      socket.off('workspace:imported');
     };
   }, []);
 
@@ -122,6 +132,18 @@ export default function CanvasPageClient({
           )}
 
           <button
+            onClick={() => setDataMenuOpen(true)}
+            className="flex items-center justify-center w-9 h-9 rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors min-h-[36px] min-w-[36px]"
+            aria-label="Import or export data"
+            title="Import / export data"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+
+          <button
             onClick={() => setSheetOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors min-h-[36px]"
             aria-label="Add card"
@@ -156,6 +178,9 @@ export default function CanvasPageClient({
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
       />
+
+      {/* Import / export data */}
+      <DataMenu open={dataMenuOpen} onClose={() => setDataMenuOpen(false)} />
     </div>
   );
 }

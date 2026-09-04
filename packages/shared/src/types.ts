@@ -71,7 +71,52 @@ export type ServerToClientEvents = {
   'collage:created': (data: CollageCreatedEvent) => void;
   'collage:deleted': (data: CollageDeletedEvent) => void;
   'collage:renamed': (data: CollageRenamedEvent) => void;
+  'workspace:imported': () => void;
 };
+
+// Data import/export
+
+export interface ExportedCard {
+  id: string;
+  type: 'LINK' | 'NOTE';
+  content: string | null;
+  notes: string | null;
+  url: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
+  ogSiteName: string | null;
+  ogFavicon: string | null;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  source: CardSource;
+  discordMessageId: string | null;
+  createdAt: string;
+}
+
+export interface ExportedCollage {
+  id: string;
+  name: string;
+  discordChannelId: string;
+  isPrivate: boolean;
+  createdAt: string;
+  cards: ExportedCard[];
+}
+
+export interface ExportPayload {
+  schemaVersion: 1;
+  exportedAt: string;
+  collages: ExportedCollage[];
+}
+
+export interface ImportSummary {
+  collagesImported: number;
+  cardsImported: number;
+  channelsCreated: number;
+  warnings: string[];
+}
 
 export type ClientToServerEvents = {
   'join:collage': (collageId: string) => void;

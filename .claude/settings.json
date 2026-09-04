@@ -10,7 +10,15 @@
       "Bash(aws secretsmanager *)",
       "PowerShell(aws ec2 stop-instances --instance-ids i-0a4b5f8437b8d094b --force --output text 2>&1)",
       "Bash(git commit -m ' *)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Skill(deep-research)",
+      "Skill(deep-research:*)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "WebFetch(domain:docs.fxtwitter.com)",
+      "WebFetch(domain:docs.fxembed.com)",
+      "Skill(codex:rescue)",
+      "Skill(codex:rescue:*)"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [

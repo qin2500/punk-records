@@ -55,3 +55,7 @@ export function emitCollageDeleted(collageId: string): void {
 export function emitCollageRenamed(collageId: string, name: string): void {
   getIo().emit('collage:renamed', { collageId, name });
 }
+
+export function emitWorkspaceImported(): void {
+  getIo().emit('workspace:imported');
+}

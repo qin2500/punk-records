@@ -1,4 +1,4 @@
-import type { Card, Collage } from '@punk-records/shared';
+import type { Card, Collage, ExportPayload, ImportSummary } from '@punk-records/shared';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -80,5 +80,24 @@ export async function deleteCard(cardId: string): Promise<void> {
 export async function rescrapeCard(cardId: string): Promise<Card> {
   const res = await fetch(`${API}/api/cards/${cardId}/rescrape`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to refresh card preview');
+  return res.json();
+}
+
+export async function exportData(): Promise<Blob> {
+  const res = await fetch(`${API}/api/export`);
+  if (!res.ok) throw new Error('Failed to export data');
+  return res.blob();
+}
+
+export async function importData(payload: ExportPayload): Promise<ImportSummary> {
+  const res = await fetch(`${API}/api/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(typeof err.error === 'string' ? err.error : 'Failed to import data');
+  }
   return res.json();
 }

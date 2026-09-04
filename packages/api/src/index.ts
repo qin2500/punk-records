@@ -8,6 +8,7 @@ import collagesRouter from './routes/collages';
 import { collageCardsRouter, cardRouter } from './routes/cards';
 import internalRouter from './routes/internal';
 import { uploadRouter } from './routes/upload';
+import dataRouter from './routes/data';
 import { setIo } from './socket/emitter';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/collages', collagesRouter);
 app.use('/api/collages', collageCardsRouter);
 app.use('/api/cards', cardRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api', dataRouter);
 app.use('/internal', internalRouter);
 
 io.on('connection', (socket) => {
