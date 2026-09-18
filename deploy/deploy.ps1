@@ -13,12 +13,14 @@ Set-Location $PSScriptRoot
 # Use a private docker config scoped to this script instead of the user's
 # default one — Windows Credential Manager (the default credsStore) fails
 # under a non-interactive SSH session ("logon session does not exist",
-# a DPAPI limitation), and something keeps re-adding it to the shared
-# config anyway. A bare {} here means auths get written in plaintext to
-# this file only, which is all a pull-then-logout flow needs.
+# a DPAPI limitation). Docker Desktop's bundled CLI defaults credsStore to
+# "desktop" even when the key is just absent, so it must be explicitly set
+# to "" to actually disable any credential store — that makes auths get
+# written in plaintext to this file instead, which is all a pull-then-logout
+# flow needs.
 $env:DOCKER_CONFIG = Join-Path $PSScriptRoot '.docker-config'
 New-Item -ItemType Directory -Force -Path $env:DOCKER_CONFIG | Out-Null
-'{}' | Set-Content (Join-Path $env:DOCKER_CONFIG 'config.json')
+'{"credsStore": ""}' | Set-Content (Join-Path $env:DOCKER_CONFIG 'config.json')
 
 # $ErrorActionPreference only catches PowerShell's own errors, not a failed
 # exit code from a native command like docker.exe — check explicitly so a
