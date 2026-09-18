@@ -77,20 +77,19 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.WINDOWS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Copy deploy files to the server
         run: |
           printf '%s' "${{ secrets.ENV_PRODUCTION }}" > env.production
-          scp -P 2222 -i ~/.ssh/deploy_key \
+          scp -P 2222 -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             docker-compose.yml deploy/deploy.ps1 \
             "${{ vars.WINDOWS_SSH_USER }}@localhost:${{ vars.WINDOWS_DEPLOY_PATH }}/"
-          scp -P 2222 -i ~/.ssh/deploy_key env.production \
+          scp -P 2222 -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no env.production \
             "${{ vars.WINDOWS_SSH_USER }}@localhost:${{ vars.WINDOWS_DEPLOY_PATH }}/.env.production"
 
       - name: Run deploy script
         run: |
-          ssh -p 2222 -i ~/.ssh/deploy_key "${{ vars.WINDOWS_SSH_USER }}@localhost" \
+          ssh -p 2222 -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${{ vars.WINDOWS_SSH_USER }}@localhost" \
             "powershell -File '${{ vars.WINDOWS_DEPLOY_PATH }}\\deploy.ps1' -GithubActor '${{ github.actor }}' -GithubToken '${{ secrets.GITHUB_TOKEN }}'"
 
       - name: Stop Cloudflare Access SSH proxy
