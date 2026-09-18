@@ -10,31 +10,33 @@ $ErrorActionPreference = 'Stop'
 # only ever runs pre-built images from GHCR.
 Set-Location $PSScriptRoot
 
-# Use a private docker config scoped to this script, passed explicitly via
-# --config on every call rather than the DOCKER_CONFIG env var, in case that
-# doesn't survive the SSH -> PowerShell -> docker.exe process chain intact.
-# Windows Credential Manager (Docker Desktop's default credsStore, which it
-# applies even when the config omits the key) fails under this non-interactive
-# SSH session with "logon session does not exist" (a DPAPI limitation) —
-# credsStore: "" is the documented way to force plaintext auth storage in
-# this file instead, which is all a pull-then-logout flow needs.
+# `docker login`'s credential-SAVE step invokes Docker Desktop's Windows
+# credential helper, which fails under this non-interactive SSH session
+# ("logon session does not exist" — a DPAPI limitation). Setting credsStore
+# to "" had no effect across several attempts, so the helper appears
+# hardcoded rather than config-driven. Skip `docker login` entirely and
+# write the equivalent auths entry straight into an isolated config file —
+# the read path (`docker compose pull`) uses this file directly with no
+# helper involved at all.
 $dockerConfigDir = Join-Path $PSScriptRoot '.docker-config'
 New-Item -ItemType Directory -Force -Path $dockerConfigDir | Out-Null
-'{"credsStore": ""}' | Set-Content (Join-Path $dockerConfigDir 'config.json')
+$authString = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("${GithubActor}:${GithubToken}"))
+@{ auths = @{ 'ghcr.io' = @{ auth = $authString } } } |
+  ConvertTo-Json -Depth 5 |
+  Set-Content (Join-Path $dockerConfigDir 'config.json')
 
 # $ErrorActionPreference only catches PowerShell's own errors, not a failed
 # exit code from a native command like docker.exe — check explicitly so a
 # down Docker engine fails the deploy instead of silently reporting success.
-echo $GithubToken | docker --config $dockerConfigDir login ghcr.io -u $GithubActor --password-stdin
-if ($LASTEXITCODE -ne 0) { throw "docker login failed with exit code $LASTEXITCODE" }
-
 docker --config $dockerConfigDir compose pull
 if ($LASTEXITCODE -ne 0) { throw "docker compose pull failed with exit code $LASTEXITCODE" }
-
-docker --config $dockerConfigDir logout ghcr.io
 
 docker compose --env-file .env.production up -d
 if ($LASTEXITCODE -ne 0) { throw "docker compose up failed with exit code $LASTEXITCODE" }
 
 # Runs after `up` so the freshly pulled images are already in use before pruning.
 docker image prune -af
+
+# The auths file holds a live token in plaintext — remove it now rather
+# than leaving it on disk between deploys.
+Remove-Item -Recurse -Force $dockerConfigDir
