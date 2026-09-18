@@ -1,0 +1,27 @@
+name: Stop EC2 deployment
+
+# One-off, manually-triggered teardown of the old EC2 stack now that the
+# backend has moved to dad's server. Delete this workflow file once it's
+# been run successfully — it's not meant to be a permanent part of CI.
+on:
+  workflow_dispatch:
+
+jobs:
+  stop:
+    name: Stop containers on EC2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop via bastion
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          proxy_host: ${{ vars.BASTION_HOST }}
+          proxy_username: ubuntu
+          proxy_key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/ubuntu/punk-records
+            docker compose down
+            docker compose ps
