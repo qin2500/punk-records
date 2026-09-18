@@ -45,49 +45,54 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy to EC2
+    name: Deploy to dad's server
     runs-on: ubuntu-latest
     needs: build
     permissions:
       contents: read
       packages: read
     steps:
-      - name: Deploy via bastion
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ vars.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          proxy_host: ${{ vars.BASTION_HOST }}
-          proxy_username: ubuntu
-          proxy_key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
+      - uses: actions/checkout@v4
 
-            # Clone repo on first deploy; pull latest compose file on subsequent deploys
-            if [ ! -d /home/ubuntu/punk-records ]; then
-              git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/qin2500/punk-records.git /home/ubuntu/punk-records
-            else
-              cd /home/ubuntu/punk-records
-              git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/qin2500/punk-records.git
-              git pull origin main
-              git remote set-url origin https://github.com/qin2500/punk-records.git
-            fi
+      - name: Install cloudflared
+        run: |
+          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
 
-            cd /home/ubuntu/punk-records
+      - name: Start Cloudflare Access SSH proxy
+        run: |
+          cloudflared access ssh \
+            --hostname ${{ vars.WINDOWS_SSH_HOSTNAME }} \
+            --url localhost:2222 \
+            --service-token-id "${{ secrets.CF_ACCESS_CLIENT_ID }}" \
+            --service-token-secret "${{ secrets.CF_ACCESS_CLIENT_SECRET }}" &
+          echo $! > cloudflared.pid
+          for i in $(seq 1 15); do
+            (exec 3<>/dev/tcp/localhost/2222) 2>/dev/null && break
+            sleep 1
+          done
 
-            # Write env file (overwrites on every deploy so secrets stay current)
-            cat > .env.production << 'PUNK_RECORDS_EOF'
-            ${{ secrets.ENV_PRODUCTION }}
-            PUNK_RECORDS_EOF
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.WINDOWS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts 2>/dev/null
 
-            # Pull latest images (EC2 never builds — images come from GHCR)
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker logout ghcr.io
+      - name: Copy deploy files to the server
+        run: |
+          printf '%s' "${{ secrets.ENV_PRODUCTION }}" > env.production
+          scp -P 2222 -i ~/.ssh/deploy_key \
+            docker-compose.yml deploy/deploy.ps1 \
+            "${{ vars.WINDOWS_SSH_USER }}@localhost:${{ vars.WINDOWS_DEPLOY_PATH }}/"
+          scp -P 2222 -i ~/.ssh/deploy_key env.production \
+            "${{ vars.WINDOWS_SSH_USER }}@localhost:${{ vars.WINDOWS_DEPLOY_PATH }}/.env.production"
 
-            # Restart services with new images
-            docker compose --env-file .env.production up -d
+      - name: Run deploy script
+        run: |
+          ssh -p 2222 -i ~/.ssh/deploy_key "${{ vars.WINDOWS_SSH_USER }}@localhost" \
+            "powershell -File '${{ vars.WINDOWS_DEPLOY_PATH }}\\deploy.ps1' -GithubActor '${{ github.actor }}' -GithubToken '${{ secrets.GITHUB_TOKEN }}'"
 
-            # Remove images no longer used by any container (runs after up so new images are active)
-            docker image prune -af
+      - name: Stop Cloudflare Access SSH proxy
+        if: always()
+        run: kill "$(cat cloudflared.pid)" 2>/dev/null || true

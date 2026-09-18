@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Events } from 'discord.js';
 import { syncChannels } from './sync';
+import { backfillMissedMessages } from './backfill';
 import { handleMessageCreate } from './events/messageCreate';
 import { handleChannelCreate } from './events/channelCreate';
 import { handleChannelDelete } from './events/channelDelete';
@@ -17,6 +18,7 @@ const client = new Client({
 client.once(Events.ClientReady, async (c) => {
   console.log(`Bot ready: ${c.user.tag}`);
   await syncChannels(client);
+  await backfillMissedMessages(client);
 });
 
 client.on(Events.MessageCreate, handleMessageCreate);

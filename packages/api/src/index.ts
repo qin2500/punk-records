@@ -10,6 +10,7 @@ import internalRouter from './routes/internal';
 import { uploadRouter } from './routes/upload';
 import dataRouter from './routes/data';
 import { setIo } from './socket/emitter';
+import { startKeepalive } from './keepalive';
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +23,7 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
 });
 
 setIo(io);
+startKeepalive();
 
 app.use(cors());
 app.use(express.json());
